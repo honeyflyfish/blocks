@@ -130,9 +130,14 @@ class SQLiteStatus(MutableMapping):
         if value is None:
             raise KeyError(key)
         else:
-            return value[0]
+            value = value[0]
+            if isinstance(value, (sqlite3.Binary, bytes)):
+                value = cPickle.loads(bytes(value))
+            return value
 
     def __setitem__(self, key, value):
+        if not isinstance(value, (type(None), int, float, str, bytes)):
+            sqlite3.register_adapter(type(value), get_object_blob)
         with self.conn:
             self.conn.execute(
                 "INSERT OR REPLACE INTO status VALUES (?, ?, ?)",
