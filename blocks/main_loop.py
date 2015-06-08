@@ -4,7 +4,7 @@ import logging
 import traceback
 
 from blocks.config import config
-from blocks.log import TrainingLog
+from blocks.log import BACKENDS
 from blocks.utils import reraise_as, unpack, change_recursion_limit
 from blocks.utils.profile import Profile, Timer
 from blocks.algorithms import DifferentiableCostMinimizer
@@ -78,15 +78,20 @@ class MainLoop(object):
         but may be used by extensions.
     log : instance of :class:`.TrainingLog`, optional
         The log. When not given, a :class:`.TrainingLog` is created.
+    log_backend : str
+        The backend to use for the log. Currently `python` and `sqlite` are
+        available. If not given, `config.log_backend` will be used.
     extensions : list of :class:`.TrainingExtension` instances
         The training extensions. Will be called in the same order as given
         here.
 
     """
-    def __init__(self, algorithm, data_stream,
-                 model=None, log=None, extensions=None):
+    def __init__(self, algorithm, data_stream, model=None, log=None,
+                 log_backend=None, extensions=None):
         if log is None:
-            log = TrainingLog()
+            if log_backend is None:
+                log_backend = config.log_backend
+            log = BACKENDS[log_backend]()
         if extensions is None:
             extensions = []
 
@@ -168,6 +173,7 @@ class MainLoop(object):
                 # called "before_training" could have changed the status
                 # of the main loop.
                 if self.log.status['iterations_done'] > 0:
+                    self.log.resume()
                     self._run_extensions('on_resumption')
                     self.status['epoch_interrupt_received'] = False
                     self.status['batch_interrupt_received'] = False

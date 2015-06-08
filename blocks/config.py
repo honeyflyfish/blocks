@@ -45,6 +45,11 @@ The following configurations are supported:
    A boolean value which determines whether to print profiling information
    at the end of a call to :meth:`.MainLoop.run`.
 
+.. option:: log_backend
+
+   The backend to use for logging experiments. Defaults to `python`, which
+   stores the log as a Python object in memory. The other option is `sqlite`.
+
 .. _YAML: http://yaml.org/
 .. _environment variables:
    https://en.wikipedia.org/wiki/Environment_variable
@@ -150,4 +155,5 @@ config.add_config('default_seed', type_=int, default=1)
 config.add_config('recursion_limit', type_=int, default=10000)
 config.add_config('profile', type_=bool_, default=False,
                   env_var='BLOCKS_PROFILE')
+config.add_config('log_backend', type_=str, default='python')
 config.load_yaml()
