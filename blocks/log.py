@@ -200,7 +200,7 @@ class SQLiteEntry(MutableMapping):
 
 
 class SQLiteLog(_TrainingLog, Mapping):
-    """Training log using SQLite as a backend.
+    r"""Training log using SQLite as a backend.
 
     Parameters
     ----------
