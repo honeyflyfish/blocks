@@ -80,7 +80,8 @@ class MainLoop(object):
         The log. When not given, a :class:`.TrainingLog` is created.
     log_backend : str
         The backend to use for the log. Currently `python` and `sqlite` are
-        available. If not given, `config.log_backend` will be used.
+        available. If not given, `config.log_backend` will be used. Ignored
+        if `log` is passed.
     extensions : list of :class:`.TrainingExtension` instances
         The training extensions. Will be called in the same order as given
         here.

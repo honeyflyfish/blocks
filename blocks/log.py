@@ -9,6 +9,8 @@ from uuid import uuid4
 from six import add_metaclass
 from six.moves import map
 
+from blocks.config import config
+
 
 @add_metaclass(ABCMeta)
 class _TrainingLog(object):
@@ -181,7 +183,9 @@ class SQLiteLog(_TrainingLog, Mapping):
        Currently this log ignores previous logs in case of resumption.
 
     """
-    def __init__(self, database):
+    def __init__(self, database=None):
+        if database is None:
+            database = config.sqlite_database
         self.conn = sqlite3.connect(database)
         with self.conn:
             self.conn.execute("""CREATE TABLE IF NOT EXISTS entries (

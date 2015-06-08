@@ -50,6 +50,10 @@ The following configurations are supported:
    The backend to use for logging experiments. Defaults to `python`, which
    stores the log as a Python object in memory. The other option is `sqlite`.
 
+.. option:: sqlite_database
+
+   The SQLite database file to use.
+
 .. _YAML: http://yaml.org/
 .. _environment variables:
    https://en.wikipedia.org/wiki/Environment_variable
@@ -156,4 +160,7 @@ config.add_config('recursion_limit', type_=int, default=10000)
 config.add_config('profile', type_=bool_, default=False,
                   env_var='BLOCKS_PROFILE')
 config.add_config('log_backend', type_=str, default='python')
+config.add_config('sqlite_database', type_=str,
+                  default=os.path.expanduser('~/blocks_log.sqlite'),
+                  env_var='BLOCKS_SQLITEDB')
 config.load_yaml()
