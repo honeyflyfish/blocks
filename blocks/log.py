@@ -23,11 +23,17 @@ class _TrainingLog(object):
     """Base class for training log.
 
     A training log stores the training timeline, statistics and other
-    auxiliary information. Information is stored as a nested dictionary,
-    ``log[time][key]``. An entry without stored data will return an empty
-    dictionary-like object that can be written to (like
-    ``defaultdict(dict)``). However, entries need to be added one by one,
-    so ``log[time] = {k1: v1, k2: v2}`` might not work.
+    auxiliary information. Training logs can use different backends e.g.
+    in-memory Python objects or an SQLite database.
+
+    Information is stored similar to a nested dictionary, so use
+    ``log[time][key]`` to read data. An entry without stored data will
+    return an empty dictionary-like object that can be written to,
+    ``log[time][key] = value``.
+
+    Depending on the backend, ``log[time] = {'key': 'value'}`` could fail.
+    Use ``log[time].update({'key': 'value'})`` for compatibility across
+    backends.
 
     In addition to the set of records displaying training dynamics, a
     training log has a :attr:`status` attribute, which is a dictionary with
