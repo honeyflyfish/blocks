@@ -254,6 +254,7 @@ class TrainingLog(defaultdict, _TrainingLog):
     """Training log using a `defaultdict` as backend."""
     def __init__(self):
         defaultdict.__init__(self, dict)
+        self.status = {}
         _TrainingLog.__init__(self)
 
     def __reduce__(self):
