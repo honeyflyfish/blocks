@@ -193,7 +193,7 @@ class SQLiteEntry(MutableMapping):
 
     def __iter__(self):
         return map(itemgetter(0), self.conn.execute(
-            "SELECT key FROM entries WHERE uuid = IN {} "
+            "SELECT key FROM entries WHERE uuid IN {} "
             "AND time = ?".format(_sub_string(self.log.ancestors)),
             tuple(self.log.ancestors) + (self.time,)
         ))
