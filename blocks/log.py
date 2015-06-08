@@ -191,6 +191,8 @@ class SQLiteLog(_TrainingLog, Mapping):
         The database (file) to connect to. Can also be `:memory:`. See
         :func:`sqlite3.connect` for details. Uses `config.sqlite_database`
         by default.
+    \*\*kwargs
+        Arguments to pass to :class:`_TrainingLog`
 
     Notes
     -----
@@ -199,7 +201,7 @@ class SQLiteLog(_TrainingLog, Mapping):
        Currently this log ignores previous logs in case of resumption.
 
     """
-    def __init__(self, database=None):
+    def __init__(self, database=None, **kwargs):
         if database is None:
             database = config.sqlite_database
         self.database = database
@@ -219,7 +221,7 @@ class SQLiteLog(_TrainingLog, Mapping):
                                    PRIMARY KEY(uuid, "key")
                                  );""")
         self.status = SQLiteStatus(self)
-        super(SQLiteLog, self).__init__()
+        super(SQLiteLog, self).__init__(**kwargs)
 
     def __getstate__(self):
         state = self.__dict__.copy()
