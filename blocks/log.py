@@ -288,7 +288,7 @@ class SQLiteLog(_TrainingLog, Mapping):
                 if parent is None or parent[0] is None:
                     break
                 ancestors.append(parent[0])
-            self._ancestors = [UUID(bytes=a) for a in ancestors]
+            self._ancestors = [UUID(bytes=bytes(a)) for a in ancestors]
         return [sqlite3.Binary(a.bytes) for a in self._ancestors]
 
     def __getitem__(self, time):
