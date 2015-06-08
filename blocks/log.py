@@ -25,7 +25,9 @@ class _TrainingLog(object):
     A training log stores the training timeline, statistics and other
     auxiliary information. Information is stored as a nested dictionary,
     ``log[time][key]``. An entry without stored data will return an empty
-    dictionary (like ``defaultdict(dict)``).
+    dictionary-like object that can be written to (like
+    ``defaultdict(dict)``). However, entries need to be added one by one,
+    so ``log[time] = {k1: v1, k2: v2}`` might not work.
 
     In addition to the set of records displaying training dynamics, a
     training log has a :attr:`status` attribute, which is a dictionary with
@@ -35,24 +37,14 @@ class _TrainingLog(object):
     ----------
     uuid : :class:`uuid.UUID`, optional
         The UUID of this log. For persistent log backends, passing the UUID
-        will result in an old log being loaded.
+        will result in an old log being loaded. Otherwise a new, random
+        UUID will be created.
 
     Attributes
     ----------
     status : dict
         A dictionary with data representing the current state of training.
         By default it contains ``iterations_done`` and ``epochs_done``.
-
-    Notes
-    -----
-    For analysis of the logs, it can be useful to convert the log to a
-    Pandas_ data frame:
-
-    .. code:: python
-
-       df = DataFrame.from_dict(log, orient='index')
-
-    .. _Pandas: http://pandas.pydata.org
 
     """
     def __init__(self, uuid=None):
@@ -79,7 +71,8 @@ class _TrainingLog(object):
     def resume(self):
         """Resume a log by setting a new random UUID.
 
-        Keeps a record of the old log that this is a continuation of.
+        Keeps a record of the old log that this is a continuation of. It
+        copies the status of the old log into the new log.
 
         """
         old_uuid = self.b_uuid
@@ -107,6 +100,7 @@ class SQLiteStatus(MutableMapping):
 
     @property
     def conn(self):
+        """Cannot store as attribute, because it's not picklable."""
         return self.log.conn
 
     def __getitem__(self, key):
@@ -144,12 +138,24 @@ class SQLiteStatus(MutableMapping):
 
 
 class SQLiteEntry(MutableMapping):
+    """Store log entries in an SQLite database.
+
+    Each entry is a row with the columns `uuid`, `time` (iterations done),
+    `key` and `value`. Note that SQLite only supports numeric values,
+    strings, and bytes (e.g. the `uuid` column). This means there is no
+    support for tuples, dictionaries, NumPy arrays, etc.
+
+    Entries are automatically retrieved from ancestral logs (i.e. logs that
+    were resumed from).
+
+    """
     def __init__(self, log, time):
         self.log = log
         self.time = time
 
     @property
     def conn(self):
+        """Cannot store as attribute, because it's not picklable."""
         return self.log.conn
 
     def __getitem__(self, key):
@@ -235,6 +241,13 @@ class SQLiteLog(_TrainingLog, Mapping):
         super(SQLiteLog, self).__init__(**kwargs)
 
     def __getstate__(self):
+        """Retrieve the state for pickling.
+
+        :class:`sqlite3.Connection` objects are not picklable, so the
+        `conn` attribute is removed and the connection re-opened upon
+        unpickling.
+
+        """
         state = self.__dict__.copy()
         del state['conn']
         return state
@@ -245,19 +258,28 @@ class SQLiteLog(_TrainingLog, Mapping):
 
     @property
     def ancestors(self):
-        """A list of ancestral logs, including this one."""
-        if hasattr(self, '_ancestors') and self.b_uuid in self._ancestors:
-            return [sqlite3.Binary(a.bytes) for a in self._ancestors]
-        ancestors = [self.b_uuid]
-        while True:
-            parent = self.conn.execute(
-                "SELECT value FROM status WHERE uuid = ? AND "
-                "key = 'resumed_from'", (ancestors[-1],)
-            ).fetchone()
-            if parent is None or parent[0] is None:
-                break
-            ancestors.append(parent[0])
-        self._ancestors = [UUID(bytes=a) for a in ancestors]
+        """A list of ancestral logs, including this one.
+
+        Ancestors are returned from nearest (newest) to furthest (oldest).
+
+        Notes
+        -----
+        The ancestors are internally stored as UUIDs, but returned as
+        binary buffers. This is because SQLite needs binary buffers, but
+        these cannot be pickled.
+
+        """
+        if self.b_uuid not in getattr(self, '_ancestors', []):
+            ancestors = [self.b_uuid]
+            while True:
+                parent = self.conn.execute(
+                    "SELECT value FROM status WHERE uuid = ? AND "
+                    "key = 'resumed_from'", (ancestors[-1],)
+                ).fetchone()
+                if parent is None or parent[0] is None:
+                    break
+                ancestors.append(parent[0])
+            self._ancestors = [UUID(bytes=a) for a in ancestors]
         return [sqlite3.Binary(a.bytes) for a in self._ancestors]
 
     def __getitem__(self, time):
@@ -280,7 +302,20 @@ class SQLiteLog(_TrainingLog, Mapping):
 
 
 class TrainingLog(defaultdict, _TrainingLog):
-    """Training log using a `defaultdict` as backend."""
+    """Training log using a `defaultdict` as backend.
+
+    Notes
+    -----
+    For analysis of the logs, it can be useful to convert the log to a
+    Pandas_ data frame:
+
+    .. code:: python
+
+       df = DataFrame.from_dict(log, orient='index')
+
+    .. _Pandas: http://pandas.pydata.org
+
+    """
     def __init__(self):
         defaultdict.__init__(self, dict)
         self.status = {}
