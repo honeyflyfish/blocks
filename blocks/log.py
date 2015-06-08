@@ -259,6 +259,7 @@ class SQLiteLog(_TrainingLog, Mapping):
         """
         state = self.__dict__.copy()
         del state['conn']
+        self.resume()
         return state
 
     def __setstate__(self, state):
