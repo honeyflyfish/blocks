@@ -168,7 +168,7 @@ class SQLiteEntry(MutableMapping):
                 continue
             else:
                 value = value[0]
-                if isinstance(value, sqlite3.Binary):
+                if isinstance(value, (sqlite3.Binary, bytes)):
                     value = cPickle.loads(bytes(value))
                 return value
         raise KeyError(key)
