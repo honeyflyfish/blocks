@@ -7,7 +7,6 @@ from numbers import Integral
 from operator import itemgetter
 from uuid import uuid4, UUID
 
-import numpy
 from six import add_metaclass
 from six.moves import cPickle, map
 
