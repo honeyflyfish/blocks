@@ -48,7 +48,8 @@ The following configurations are supported:
 .. option:: log_backend
 
    The backend to use for logging experiments. Defaults to `python`, which
-   stores the log as a Python object in memory. The other option is `sqlite`.
+   stores the log as a Python object in memory. The other option is
+   `sqlite`.
 
 .. option:: sqlite_database
 
