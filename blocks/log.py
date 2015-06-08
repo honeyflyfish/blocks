@@ -131,7 +131,8 @@ class SQLiteStatus(MutableMapping):
             raise KeyError(key)
         else:
             value = value[0]
-            if isinstance(value, (sqlite3.Binary, bytes)):
+            if (isinstance(value, (sqlite3.Binary, bytes)) and
+                    key != 'resumed_from'):
                 value = cPickle.loads(bytes(value))
             return value
 
@@ -256,7 +257,6 @@ class SQLiteLog(_TrainingLog, Mapping):
             database = config.sqlite_database
         self.database = database
         self.conn = sqlite3.connect(database)
-        self.conn.text_factory = str
         with self.conn:
             self.conn.execute("""CREATE TABLE IF NOT EXISTS entries (
                                    uuid BLOB NOT NULL,
