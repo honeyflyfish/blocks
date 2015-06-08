@@ -7,7 +7,7 @@ from numbers import Integral
 from operator import itemgetter
 from uuid import uuid4, UUID
 
-from six import add_metaclass
+import six
 from six.moves import cPickle, map
 
 from blocks.config import config
@@ -18,7 +18,7 @@ def _sub_string(replacements):
     return '({})'.format(', '.join(repeat('?', len(replacements))))
 
 
-@add_metaclass(ABCMeta)
+@six.add_metaclass(ABCMeta)
 class _TrainingLog(object):
     """Base class for training log.
 
@@ -131,6 +131,7 @@ class SQLiteStatus(MutableMapping):
             raise KeyError(key)
         else:
             value = value[0]
+            # UUIDs are stored as bytes and should not be unpickled
             if (isinstance(value, (sqlite3.Binary, bytes)) and
                     key != 'resumed_from'):
                 value = cPickle.loads(bytes(value))
@@ -257,6 +258,8 @@ class SQLiteLog(_TrainingLog, Mapping):
             database = config.sqlite_database
         self.database = database
         self.conn = sqlite3.connect(database)
+        # SQLite balks at receiving 8-bit strings sometimes
+        self.conn.text_factory = six.u
         with self.conn:
             self.conn.execute("""CREATE TABLE IF NOT EXISTS entries (
                                    uuid BLOB NOT NULL,
