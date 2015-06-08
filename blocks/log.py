@@ -14,7 +14,7 @@ from blocks.config import config
 
 
 def _sub_string(replacements):
-    """Return a certain number of ? to be substitutede by `replacements`."""
+    """Return a certain number of ? to be substituted by `replacements`."""
     return '({})'.format(', '.join(repeat('?', len(replacements))))
 
 
@@ -57,20 +57,31 @@ class _TrainingLog(object):
     """
     def __init__(self, uuid=None):
         if uuid is None:
-            uuid = uuid4()
-        self.uuid = uuid
-        self.status.update({
-            'iterations_done': 0,
-            'epochs_done': 0,
-            'resumed_from': None
-        })
+            self.uuid = uuid4()
+        else:
+            self.uuid = uuid
+        if uuid is None:
+            self.status.update({
+                'iterations_done': 0,
+                'epochs_done': 0,
+                'resumed_from': None
+            })
 
     @property
     def b_uuid(self):
+        """Return a buffered version of the UUID bytes.
+
+        This is necessary to store bytes in an SQLite database.
+
+        """
         return sqlite3.Binary(self.uuid.bytes)
 
     def resume(self):
-        """Resume a log by setting a new random UUID."""
+        """Resume a log by setting a new random UUID.
+
+        Keeps a record of the old log that this is a continuation of.
+
+        """
         old_uuid = self.b_uuid
         old_status = dict(self.status)
         self.uuid = uuid4()

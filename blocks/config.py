@@ -51,7 +51,7 @@ The following configurations are supported:
    stores the log as a Python object in memory. The other option is
    `sqlite`.
 
-.. option:: sqlite_database
+.. option:: sqlite_database, BLOCKS_SQLITEDB
 
    The SQLite database file to use.
 
