@@ -5,7 +5,7 @@ from collections import defaultdict, MutableMapping, Mapping
 from itertools import repeat
 from numbers import Integral
 from operator import itemgetter
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 from six import add_metaclass
 from six.moves import map
@@ -93,7 +93,10 @@ class _TrainingLog(object):
 class SQLiteStatus(MutableMapping):
     def __init__(self, log):
         self.log = log
-        self.conn = log.conn
+
+    @property
+    def conn(self):
+        return self.log.conn
 
     def __getitem__(self, key):
         value = self.conn.execute(
@@ -132,8 +135,11 @@ class SQLiteStatus(MutableMapping):
 class SQLiteEntry(MutableMapping):
     def __init__(self, log, time):
         self.log = log
-        self.conn = log.conn
         self.time = time
+
+    @property
+    def conn(self):
+        return self.log.conn
 
     def __getitem__(self, key):
         for ancestor_b_uuid in self.log.ancestors:
@@ -196,6 +202,7 @@ class SQLiteLog(_TrainingLog, Mapping):
     def __init__(self, database=None):
         if database is None:
             database = config.sqlite_database
+        self.database = database
         self.conn = sqlite3.connect(database)
         with self.conn:
             self.conn.execute("""CREATE TABLE IF NOT EXISTS entries (
@@ -214,11 +221,20 @@ class SQLiteLog(_TrainingLog, Mapping):
         self.status = SQLiteStatus(self)
         super(SQLiteLog, self).__init__()
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        del state['conn']
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.conn = sqlite3.connect(self.database)
+
     @property
     def ancestors(self):
         """A list of ancestral logs, including this one."""
         if hasattr(self, '_ancestors') and self.b_uuid in self._ancestors:
-            return self._ancestors
+            return [sqlite3.Binary(a.bytes) for a in self._ancestors]
         ancestors = [self.b_uuid]
         while True:
             parent = self.conn.execute(
@@ -228,8 +244,8 @@ class SQLiteLog(_TrainingLog, Mapping):
             if parent is None or parent[0] is None:
                 break
             ancestors.append(parent[0])
-        self._ancestors = ancestors
-        return self._ancestors
+        self._ancestors = [UUID(bytes=a) for a in ancestors]
+        return [sqlite3.Binary(a.bytes) for a in self._ancestors]
 
     def __getitem__(self, time):
         self._check_time(time)
