@@ -39,6 +39,13 @@ class _TrainingLog(object):
     training log has a :attr:`status` attribute, which is a dictionary with
     data that is not bound to a particular time.
 
+    .. warning::
+
+       Changes to mutable objects might not be reflected in the log,
+       depending on the backend. So don't use
+       ``log.status['key'].append(...)``, use ``log.status['key'] = ...``
+       instead.
+
     Parameters
     ----------
     uuid : :class:`uuid.UUID`, optional
@@ -50,7 +57,8 @@ class _TrainingLog(object):
     ----------
     status : dict
         A dictionary with data representing the current state of training.
-        By default it contains ``iterations_done`` and ``epochs_done``.
+        By default it contains ``iterations_done``, ``epochs_done`` and
+        ``_epoch_ends`` (a list of time stamps when epochs ended).
 
     """
     def __init__(self, uuid=None):
@@ -62,6 +70,7 @@ class _TrainingLog(object):
             self.status.update({
                 'iterations_done': 0,
                 'epochs_done': 0,
+                '_epoch_ends': [],
                 'resumed_from': None
             })
 
@@ -98,6 +107,10 @@ class _TrainingLog(object):
     @property
     def previous_row(self):
         return self[self.status['iterations_done'] - 1]
+
+    @property
+    def last_epoch_row(self):
+        return self[self.status['_epoch_ends'][-1]]
 
 
 class SQLiteStatus(MutableMapping):
