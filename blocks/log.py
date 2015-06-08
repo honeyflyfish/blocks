@@ -65,6 +65,10 @@ class _TrainingLog(object):
             'resumed_from': None
         })
 
+    @property
+    def b_uuid(self):
+        return sqlite3.Binary(self.uuid.bytes)
+
     def resume(self):
         """Resume a log by setting a new random UUID."""
         old_uuid = self.b_uuid
@@ -209,10 +213,6 @@ class SQLiteLog(_TrainingLog, Mapping):
                                  );""")
         self.status = SQLiteStatus(self)
         super(SQLiteLog, self).__init__()
-
-    @property
-    def b_uuid(self):
-        return sqlite3.Binary(self.uuid.bytes)
 
     @property
     def ancestors(self):
