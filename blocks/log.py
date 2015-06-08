@@ -2,6 +2,7 @@
 import sqlite3
 from abc import ABCMeta
 from collections import defaultdict, MutableMapping, Mapping
+from itertools import repeat
 from numbers import Integral
 from operator import itemgetter
 from uuid import uuid4
@@ -10,6 +11,11 @@ from six import add_metaclass
 from six.moves import map
 
 from blocks.config import config
+
+
+def _sub_string(replacements):
+    """Return a certain number of ? to be substitutede by `replacements`."""
+    return '({})'.format(', '.join(repeat('?', len(replacements))))
 
 
 @add_metaclass(ABCMeta)
@@ -126,14 +132,16 @@ class SQLiteEntry(MutableMapping):
         self.time = time
 
     def __getitem__(self, key):
-        value = self.conn.execute(
-            "SELECT value FROM entries WHERE uuid = ? AND time = ? "
-            "AND key = ?", (self.log.b_uuid, self.time, key)
-        ).fetchone()
-        if value is None:
-            raise KeyError(key)
-        else:
-            return value[0]
+        for ancestor_b_uuid in self.log.ancestors:
+            value = self.conn.execute(
+                "SELECT value FROM entries WHERE uuid = ? AND time = ? "
+                "AND key = ?", (ancestor_b_uuid, self.time, key)
+            ).fetchone()
+            if value is None:
+                continue
+            else:
+                return value[0]
+        raise KeyError(key)
 
     def __setitem__(self, key, value):
         with self.conn:
@@ -150,15 +158,17 @@ class SQLiteEntry(MutableMapping):
             )
 
     def __len__(self):
-        return self.conn.execute("SELECT COUNT(*) FROM entries WHERE "
-                                 "uuid = ? AND time = ?",
-                                 (self.log.b_uuid,
-                                  self.time)).fetchone()[0]
+        return self.conn.execute(
+            "SELECT COUNT(*) FROM entries WHERE uuid IN {} "
+            "AND time = ?".format(_sub_string(self.log.ancestors)),
+            tuple(self.log.ancestors) + (self.time,)
+        ).fetchone()[0]
 
     def __iter__(self):
         return map(itemgetter(0), self.conn.execute(
-            "SELECT key FROM entries WHERE uuid = ? AND time = ?",
-            (self.log.b_uuid, self.time)
+            "SELECT key FROM entries WHERE uuid = IN {} "
+            "AND time = ?".format(_sub_string(self.log.ancestors)),
+            tuple(self.log.ancestors) + (self.time,)
         ))
 
 
@@ -227,15 +237,17 @@ class SQLiteLog(_TrainingLog, Mapping):
 
     def __iter__(self):
         return map(itemgetter(0), self.conn.execute(
-            "SELECT DISTINCT time FROM entries WHERE uuid = ? "
-            "ORDER BY time ASC",
-            (self.b_uuid,)
+            "SELECT DISTINCT time FROM entries WHERE uuid IN {} "
+            "ORDER BY time ASC".format(_sub_string(self.ancestors)),
+            tuple(self.ancestors)
         ))
 
     def __len__(self):
-        return self.conn.execute("SELECT COUNT(DISTINCT time) "
-                                 "FROM entries WHERE uuid = ?",
-                                 (self.b_uuid,)).fetchone()[0]
+        return self.conn.execute(
+            "SELECT COUNT(DISTINCT time) FROM entries "
+            "WHERE uuid IN {}".format(_sub_string(self.ancestors)),
+            tuple(self.ancestors)
+        ).fetchone()[0]
 
 
 class TrainingLog(defaultdict, _TrainingLog):
