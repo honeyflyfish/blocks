@@ -19,7 +19,7 @@ class WriteBatchExtension(TrainingExtension):
     """Writes data saved by MockAlgorithm to the log."""
     def after_batch(self, _):
         self.main_loop.log.current_row['batch'] = \
-            self.main_loop.algorithm.batch
+            self.main_loop.algorithm.batch['data']
 
 
 def test_main_loop():
@@ -60,7 +60,7 @@ def test_training_resumption():
         assert main_loop.log.status['iterations_done'] == 27
         assert main_loop.log.status['epochs_done'] == 2
         for i in range(27):
-            assert main_loop.log[i + 1]['batch'] == {"data": i % 10}
+            assert main_loop.log[i + 1]['batch'] == i % 10
 
     do_test(False)
     do_test(True)
