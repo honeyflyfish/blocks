@@ -256,6 +256,7 @@ class SQLiteLog(_TrainingLog, Mapping):
             database = config.sqlite_database
         self.database = database
         self.conn = sqlite3.connect(database)
+        self.conn.text_factory = str
         with self.conn:
             self.conn.execute("""CREATE TABLE IF NOT EXISTS entries (
                                    uuid BLOB NOT NULL,
