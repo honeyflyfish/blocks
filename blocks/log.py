@@ -7,8 +7,9 @@ from numbers import Integral
 from operator import itemgetter
 from uuid import uuid4, UUID
 
+import numpy
 from six import add_metaclass
-from six.moves import map
+from six.moves import cPickle, map
 
 from blocks.config import config
 
@@ -167,7 +168,10 @@ class SQLiteEntry(MutableMapping):
             if value is None:
                 continue
             else:
-                return value[0]
+                value = value[0]
+                if isinstance(value, buffer):
+                    value = cPickle.loads(bytes(value))
+                return value
         raise KeyError(key)
 
     def __setitem__(self, key, value):
@@ -197,6 +201,10 @@ class SQLiteEntry(MutableMapping):
             "AND time = ?".format(_sub_string(self.log.ancestors)),
             tuple(self.log.ancestors) + (self.time,)
         ))
+
+
+def get_object_blob(obj):
+    return sqlite3.Binary(cPickle.dumps(obj))
 
 
 class SQLiteLog(_TrainingLog, Mapping):
@@ -238,6 +246,8 @@ class SQLiteLog(_TrainingLog, Mapping):
                                    PRIMARY KEY(uuid, "key")
                                  );""")
         self.status = SQLiteStatus(self)
+        sqlite3.register_adapter(tuple, get_object_blob)
+        sqlite3.register_adapter(numpy.ndarray, get_object_blob)
         super(SQLiteLog, self).__init__(**kwargs)
 
     def __getstate__(self):
