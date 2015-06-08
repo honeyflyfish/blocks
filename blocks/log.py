@@ -175,6 +175,8 @@ class SQLiteEntry(MutableMapping):
         raise KeyError(key)
 
     def __setitem__(self, key, value):
+        if not isinstance(value, (type(None), int, float, str, bytes)):
+            sqlite3.register_adapter(type(value), get_object_blob)
         with self.conn:
             self.conn.execute(
                 "INSERT OR REPLACE INTO entries VALUES (?, ?, ?, ?)",
@@ -246,8 +248,6 @@ class SQLiteLog(_TrainingLog, Mapping):
                                    PRIMARY KEY(uuid, "key")
                                  );""")
         self.status = SQLiteStatus(self)
-        sqlite3.register_adapter(tuple, get_object_blob)
-        sqlite3.register_adapter(numpy.ndarray, get_object_blob)
         super(SQLiteLog, self).__init__(**kwargs)
 
     def __getstate__(self):
