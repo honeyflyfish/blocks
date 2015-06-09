@@ -1,5 +1,6 @@
 """The event-based main loop of Blocks."""
 import sqlite3
+import warnings
 from abc import ABCMeta
 from collections import defaultdict, MutableMapping, Mapping
 from itertools import repeat
@@ -230,9 +231,20 @@ class SQLiteEntry(MutableMapping):
             tuple(self.log.ancestors) + (self.time,)
         ))
 
+LARGE_BLOB_WARNING = """
+
+An object of {} bytes was stored in the SQLite database. SQLite natively only \
+supports numbers and text. Other objects will be pickled before being \
+saved. For large objects, this can be slow and degrade performance of the \
+database."""
+
 
 def get_object_blob(obj):
-    return sqlite3.Binary(cPickle.dumps(obj))
+    blob = sqlite3.Binary(cPickle.dumps(obj))
+    if len(blob) > 1024 * 4:
+        warnings.warn('large objects stored in SQLite' +
+                      LARGE_BLOB_WARNING.format(len(blob)))
+    return blob
 
 
 class SQLiteLog(_TrainingLog, Mapping):
