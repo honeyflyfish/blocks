@@ -138,7 +138,8 @@ class SQLiteStatus(MutableMapping):
             return value
 
     def __setitem__(self, key, value):
-        if not isinstance(value, (type(None), int, float, str, bytes)):
+        if (not isinstance(value, (type(None), int, float, str, bytes)) and
+                key != 'resumed_from'):
             sqlite3.register_adapter(type(value), get_object_blob)
         with self.conn:
             self.conn.execute(
